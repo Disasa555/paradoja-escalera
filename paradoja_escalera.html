@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paradoja de la escalera — interactivo</title>
+<style>
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    max-width: 720px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    color: #222;
+    background: #fafafa;
+  }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  p.sub { color: #666; margin-top: 0; margin-bottom: 1.5rem; }
+  canvas {
+    width: 100%;
+    max-width: 500px;
+    height: auto;
+    aspect-ratio: 1;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    display: block;
+    margin: 0 auto 1rem;
+  }
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  input[type=range] { flex: 1; }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .stat {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 0.75rem;
+    text-align: center;
+  }
+  .stat .label { font-size: 0.75rem; color: #666; display: block; }
+  .stat .value { font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .stat.stairs .value { color: #2980b9; }
+  .stat.diag .value { color: #e74c3c; }
+  .stat.dev .value { color: #27ae60; }
+  .note { font-size: 0.9rem; color: #555; line-height: 1.5; }
+  .legend { font-size: 0.85rem; color: #555; text-align: center; }
+  .legend span { display: inline-block; margin: 0 0.5rem; }
+  .legend .blue::before { content: "■"; color: #2980b9; margin-right: 0.25rem; }
+  .legend .red::before  { content: "■"; color: #e74c3c; margin-right: 0.25rem; }
+</style>
+</head>
+<body>
+
+<h1>La paradoja de la escalera</h1>
+<p class="sub">Aumenta los peldaños. La forma se acerca a la diagonal, pero la longitud no cambia.</p>
+
+<canvas id="c" width="600" height="600"></canvas>
+
+<div class="legend">
+  <span class="blue">Escalera</span>
+  <span class="red">Diagonal</span>
+</div>
+
+<div class="controls">
+  <label for="steps">Peldaños:</label>
+  <input type="range" id="steps" min="1" max="500" value="1" step="1">
+  <strong id="stepsLabel">1</strong>
+</div>
+
+<div class="stats">
+  <div class="stat stairs">
+    <span class="label">Longitud escalera</span>
+    <span class="value" id="lengthLabel">2.0000</span>
+  </div>
+  <div class="stat diag">
+    <span class="label">Diagonal (√2)</span>
+    <span class="value" id="diagLabel">1.4142</span>
+  </div>
+  <div class="stat dev">
+    <span class="label">Desviación máx.</span>
+    <span class="value" id="devLabel">0.500000</span>
+  </div>
+</div>
+
+<p class="note">
+  Aunque la desviación máxima tiende a 0 (la escalera se confunde con la diagonal), la longitud total sigue siendo exactamente 2.
+  Ese es el corazón de la paradoja: <strong>el límite de la forma no conserva la longitud</strong>.
+</p>
+
+<script>
+  const canvas = document.getElementById('c');
+  const ctx = canvas.getContext('2d');
+  const slider = document.getElementById('steps');
+  const stepsLabel = document.getElementById('stepsLabel');
+  const lengthLabel = document.getElementById('lengthLabel');
+  const devLabel = document.getElementById('devLabel');
+
+  // Coordenadas del cuadrado (lado = 1 en unidades matemáticas)
+  const PAD = 60;
+  const SIDE = canvas.width - PAD * 2; // 480
+  const OX = PAD;
+  const OY = canvas.height - PAD;
+
+  function draw() {
+    const N = parseInt(slider.value, 10);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Cuadrado
+    ctx.strokeStyle = '#bbb';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(OX, OY - SIDE, SIDE, SIDE);
+
+    // Diagonal
+    ctx.strokeStyle = '#e74c3c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(OX, OY);
+    ctx.lineTo(OX + SIDE, OY - SIDE);
+    ctx.stroke();
+
+    // Escalera
+    const w = SIDE / N;
+    const h = SIDE / N;
+    ctx.strokeStyle = '#2980b9';
+    ctx.lineWidth = Math.max(0.5, Math.min(2, 40 / N));
+    ctx.lineJoin = 'miter';
+    ctx.beginPath();
+    ctx.moveTo(OX, OY);
+    for (let k = 0; k < N; k++) {
+      ctx.lineTo(OX + (k + 1) * w, OY - k * h);
+      ctx.lineTo(OX + (k + 1) * w, OY - (k + 1) * h);
+    }
+    ctx.stroke();
+
+    // Etiquetas
+    stepsLabel.textContent = N;
+    lengthLabel.textContent = '2.0000';
+    devLabel.textContent = (1 / (2 * N)).toFixed(6);
+  }
+
+  slider.addEventListener('input', draw);
+  draw();
+</script>
+
+</body>
+</html>
