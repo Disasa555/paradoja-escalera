@@ -3,124 +3,177 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Paradoja de la escalera — interactivo</title>
+<title>Paradoja de la Escalera - Interactivo</title>
 <style>
-  body {
-    font-family: system-ui, -apple-system, sans-serif;
-    max-width: 720px;
-    margin: 2rem auto;
-    padding: 0 1rem;
-    color: #222;
-    background: #fafafa;
+  :root {
+    --bg: #0f172a;
+    --panel: #1e293b;
+    --text: #f8fafc;
+    --accent: #3b82f6;
+    --red: #ef4444;
+    --green: #10b981;
   }
-  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
-  p.sub { color: #666; margin-top: 0; margin-bottom: 1.5rem; }
-  canvas {
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+  }
+  header { text-align: center; padding: 2rem 1rem 1rem; }
+  h1 { margin: 0 0 0.5rem; color: var(--accent); }
+  p.sub { margin: 0; color: #94a3b8; max-width: 600px; }
+  
+  .main-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: center;
+    padding: 1rem;
+    max-width: 1000px;
+  }
+
+  .canvas-container {
+    background: var(--panel);
+    padding: 1rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  }
+
+  canvas { display: block; background: #fff; border-radius: 4px; }
+  #graphCanvas { background: #1e293b; border: 1px solid #334155; }
+
+  .controls {
+    background: var(--panel);
+    padding: 1.5rem;
+    border-radius: 12px;
     width: 100%;
     max-width: 500px;
-    height: auto;
-    aspect-ratio: 1;
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    display: block;
-    margin: 0 auto 1rem;
-  }
-  .controls {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1rem;
   }
-  input[type=range] { flex: 1; }
+
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+  input[type=range] { flex: 1; cursor: pointer; }
+  
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: 0.2s;
+  }
+  button:hover { filter: brightness(1.2); }
+  button.active { background: var(--green); }
+
   .stats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
   }
   .stat {
-    background: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
+    background: #0f172a;
     padding: 0.75rem;
+    border-radius: 8px;
     text-align: center;
+    border: 1px solid #334155;
   }
-  .stat .label { font-size: 0.75rem; color: #666; display: block; }
-  .stat .value { font-size: 1.1rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .stat.stairs .value { color: #2980b9; }
-  .stat.diag .value { color: #e74c3c; }
-  .stat.dev .value { color: #27ae60; }
-  .note { font-size: 0.9rem; color: #555; line-height: 1.5; }
-  .legend { font-size: 0.85rem; color: #555; text-align: center; }
-  .legend span { display: inline-block; margin: 0 0.5rem; }
-  .legend .blue::before { content: "■"; color: #2980b9; margin-right: 0.25rem; }
-  .legend .red::before  { content: "■"; color: #e74c3c; margin-right: 0.25rem; }
+  .stat span { display: block; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+  .stat strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .stat.stairs strong { color: var(--accent); }
+  .stat.dev strong { color: var(--green); }
 </style>
 </head>
 <body>
 
-<h1>La paradoja de la escalera</h1>
-<p class="sub">Aumenta los peldaños. La forma se acerca a la diagonal, pero la longitud no cambia.</p>
+<header>
+  <h1>La Paradoja de la Escalera</h1>
+  <p class="sub">La forma converge a la diagonal, pero la longitud se queda estancada en 2. Mueve el slider o dale al Play.</p>
+</header>
 
-<canvas id="c" width="600" height="600"></canvas>
-
-<div class="legend">
-  <span class="blue">Escalera</span>
-  <span class="red">Diagonal</span>
+<div class="main-container">
+  <!-- Lienzo de la escalera -->
+  <div class="canvas-container">
+    <canvas id="c" width="400" height="400"></canvas>
+  </div>
+  
+  <!-- Lienzo de la gráfica matemática -->
+  <div class="canvas-container">
+    <canvas id="graphCanvas" width="400" height="400"></canvas>
+  </div>
 </div>
 
 <div class="controls">
-  <label for="steps">Peldaños:</label>
-  <input type="range" id="steps" min="1" max="500" value="1" step="1">
-  <strong id="stepsLabel">1</strong>
-</div>
+  <div class="row">
+    <label for="steps">Peldaños:</label>
+    <input type="range" id="steps" min="0" max="100" value="0" step="1">
+    <strong id="stepsLabel">1</strong>
+  </div>
+  
+  <div class="row">
+    <button id="playBtn">▶ Autoplay</button>
+    <button id="toggleAreaBtn">Mostrar Área</button>
+  </div>
 
-<div class="stats">
-  <div class="stat stairs">
-    <span class="label">Longitud escalera</span>
-    <span class="value" id="lengthLabel">2.0000</span>
-  </div>
-  <div class="stat diag">
-    <span class="label">Diagonal (√2)</span>
-    <span class="value" id="diagLabel">1.4142</span>
-  </div>
-  <div class="stat dev">
-    <span class="label">Desviación máx.</span>
-    <span class="value" id="devLabel">0.500000</span>
+  <div class="stats">
+    <div class="stat stairs">
+      <span>Longitud Escalera</span>
+      <strong id="lengthLabel">2.0000</strong>
+    </div>
+    <div class="stat dev">
+      <span>Desviación Máx.</span>
+      <strong id="devLabel">0.500000</strong>
+    </div>
   </div>
 </div>
-
-<p class="note">
-  Aunque la desviación máxima tiende a 0 (la escalera se confunde con la diagonal), la longitud total sigue siendo exactamente 2.
-  Ese es el corazón de la paradoja: <strong>el límite de la forma no conserva la longitud</strong>.
-</p>
 
 <script>
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
+  const graphCanvas = document.getElementById('graphCanvas');
+  const gCtx = graphCanvas.getContext('2d');
+  
   const slider = document.getElementById('steps');
   const stepsLabel = document.getElementById('stepsLabel');
   const lengthLabel = document.getElementById('lengthLabel');
   const devLabel = document.getElementById('devLabel');
+  const playBtn = document.getElementById('playBtn');
+  const toggleAreaBtn = document.getElementById('toggleAreaBtn');
 
-  // Coordenadas del cuadrado (lado = 1 en unidades matemáticas)
-  const PAD = 60;
-  const SIDE = canvas.width - PAD * 2; // 480
+  const PAD = 40;
+  const SIDE = canvas.width - PAD * 2;
   const OX = PAD;
   const OY = canvas.height - PAD;
 
-  function draw() {
-    const N = parseInt(slider.value, 10);
+  let isPlaying = false;
+  let showArea = false;
+  let playInterval;
+
+  // Escala logarítmica: el slider va de 0 a 100, N = 2^(slider/10)
+  function getN() {
+    return Math.max(1, Math.round(Math.pow(2, slider.value / 10)));
+  }
+
+  function drawStaircase() {
+    const N = getN();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Cuadrado
-    ctx.strokeStyle = '#bbb';
-    ctx.lineWidth = 1;
+    // Cuadrado base
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 2;
     ctx.strokeRect(OX, OY - SIDE, SIDE, SIDE);
 
     // Diagonal
-    ctx.strokeStyle = '#e74c3c';
+    ctx.strokeStyle = '#ef4444';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(OX, OY);
@@ -128,27 +181,147 @@
     ctx.stroke();
 
     // Escalera
-    const w = SIDE / N;
-    const h = SIDE / N;
-    ctx.strokeStyle = '#2980b9';
-    ctx.lineWidth = Math.max(0.5, Math.min(2, 40 / N));
+    const stepW = SIDE / N;
+    const stepH = SIDE / N;
+    
+    // Sombreado del área (opcional)
+    if (showArea) {
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+      ctx.beginPath();
+      ctx.moveTo(OX, OY);
+      for (let i = 0; i < N; i++) {
+        ctx.lineTo(OX + (i + 1) * stepW, OY - i * stepH);
+        ctx.lineTo(OX + (i + 1) * stepW, OY - (i + 1) * stepH);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = Math.max(1, 5 - Math.log10(N));
     ctx.lineJoin = 'miter';
     ctx.beginPath();
     ctx.moveTo(OX, OY);
-    for (let k = 0; k < N; k++) {
-      ctx.lineTo(OX + (k + 1) * w, OY - k * h);
-      ctx.lineTo(OX + (k + 1) * w, OY - (k + 1) * h);
+    for (let i = 0; i < N; i++) {
+      ctx.lineTo(OX + (i + 1) * stepW, OY - i * stepH);
+      ctx.lineTo(OX + (i + 1) * stepW, OY - (i + 1) * stepH);
     }
     ctx.stroke();
+  }
 
-    // Etiquetas
+  function drawGraph() {
+    gCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+    
+    const N = getN();
+    const W = graphCanvas.width;
+    const H = graphCanvas.height;
+    const margin = 40;
+    const graphW = W - margin * 2;
+    const graphH = H - margin * 2;
+
+    // Ejes
+    gCtx.strokeStyle = '#64748b';
+    gCtx.lineWidth = 1;
+    gCtx.beginPath();
+    gCtx.moveTo(margin, H - margin);
+    gCtx.lineTo(W - margin, H - margin); // X
+    gCtx.moveTo(margin, margin);
+    gCtx.lineTo(margin, H - margin); // Y
+    gCtx.stroke();
+
+    // Función para dibujar una línea en la gráfica
+    // X: log(N) hasta log(1024) -> 0 a 1
+    // Y: valor de 0 a 2 (longitud) a escala
+    function plot(fn, color, width) {
+      gCtx.strokeStyle = color;
+      gCtx.lineWidth = width;
+      gCtx.beginPath();
+      for (let i = 0; i <= 100; i++) {
+        const n = Math.pow(2, i / 10);
+        const x = margin + (i / 100) * graphW;
+        const y = H - margin - (fn(n) / 2.5) * graphH; // 2.5 para dar margen arriba
+        if (i === 0) gCtx.moveTo(x, y);
+        else gCtx.lineTo(x, y);
+      }
+      gCtx.stroke();
+    }
+
+    // Línea de Longitud (siempre 2)
+    plot(n => 2, '#3b82f6', 2);
+    
+    // Línea de Diagonal + Desviación (1.414 + 0.5/n)
+    // Muestra cómo se acerca a 1.414
+    plot(n => Math.SQRT2 + (1 / (2 * n)), '#10b981', 2);
+
+    // Punto actual
+    const currentX = margin + (slider.value / 100) * graphW;
+    const currentY = H - margin - (2 / 2.5) * graphH;
+    gCtx.fillStyle = '#3b82f6';
+    gCtx.beginPath();
+    gCtx.arc(currentX, currentY, 4, 0, Math.PI * 2);
+    gCtx.fill();
+
+    gCtx.fillStyle = '#10b981';
+    const currentYDev = H - margin - ((Math.SQRT2 + (1/(2*N))) / 2.5) * graphH;
+    gCtx.beginPath();
+    gCtx.arc(currentX, currentYDev, 4, 0, Math.PI * 2);
+    gCtx.fill();
+
+    // Textos
+    gCtx.fillStyle = '#94a3b8';
+    gCtx.font = '12px sans-serif';
+    gCtx.fillText('Longitud', margin + 5, margin - 10);
+    gCtx.fillStyle = '#3b82f6';
+    gCtx.fillRect(margin + 5, margin - 5, 10, 10);
+    
+    gCtx.fillStyle = '#10b981';
+    gCtx.fillRect(margin + 70, margin - 5, 10, 10);
+    gCtx.fillStyle = '#94a3b8';
+    gCtx.fillText('Diagonal + Desv.', margin + 85, margin - 10);
+
+    gCtx.fillText('N (peldaños)', W - margin - 60, H - margin + 20);
+  }
+
+  function update() {
+    const N = getN();
     stepsLabel.textContent = N;
     lengthLabel.textContent = '2.0000';
     devLabel.textContent = (1 / (2 * N)).toFixed(6);
+    
+    drawStaircase();
+    drawGraph();
   }
 
-  slider.addEventListener('input', draw);
-  draw();
+  // Event Listeners
+  slider.addEventListener('input', update);
+  
+  playBtn.addEventListener('click', () => {
+    isPlaying = !isPlaying;
+    if (isPlaying) {
+      playBtn.textContent = '⏸ Pausa';
+      playBtn.classList.add('active');
+      playInterval = setInterval(() => {
+        let val = parseInt(slider.value) + 1;
+        if (val > 100) val = 0; // Reiniciar
+        slider.value = val;
+        update();
+      }, 100);
+    } else {
+      playBtn.textContent = '▶ Autoplay';
+      playBtn.classList.remove('active');
+      clearInterval(playInterval);
+    }
+  });
+
+  toggleAreaBtn.addEventListener('click', () => {
+    showArea = !showArea;
+    toggleAreaBtn.textContent = showArea ? 'Ocultar Área' : 'Mostrar Área';
+    toggleAreaBtn.classList.toggle('active', showArea);
+    update();
+  });
+
+  // Iniciar
+  update();
 </script>
 
 </body>
