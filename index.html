@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Paradoja de la Escalera - Interactivo</title>
+<title>La Paradoja de la Escalera</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -12,6 +12,7 @@
     --accent: #3b82f6;
     --red: #ef4444;
     --green: #10b981;
+    --grid: #334155;
   }
   body {
     font-family: 'Segoe UI', system-ui, sans-serif;
@@ -41,10 +42,13 @@
     padding: 1rem;
     border-radius: 12px;
     box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
-  canvas { display: block; background: #fff; border-radius: 4px; }
-  #graphCanvas { background: #1e293b; border: 1px solid #334155; }
+  canvas { display: block; border-radius: 4px; background: #fff; }
+  #graphCanvas { background: var(--panel); }
 
   .controls {
     background: var(--panel);
@@ -76,20 +80,21 @@
 
   .stats {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
     margin-top: 1rem;
   }
   .stat {
     background: #0f172a;
-    padding: 0.75rem;
+    padding: 0.75rem 0.5rem;
     border-radius: 8px;
     text-align: center;
     border: 1px solid #334155;
   }
-  .stat span { display: block; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
-  .stat strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+  .stat span { display: block; font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.25rem; }
+  .stat strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
   .stat.stairs strong { color: var(--accent); }
+  .stat.circ strong { color: var(--red); }
   .stat.dev strong { color: var(--green); }
 </style>
 </head>
@@ -97,7 +102,7 @@
 
 <header>
   <h1>La Paradoja de la Escalera</h1>
-  <p class="sub">La forma converge a la diagonal, pero la longitud se queda estancada en 2. Mueve el slider o dale al Play.</p>
+  <p class="sub">La forma converge a la diagonal, pero la longitud se queda estancada en 2 mientras la diagonal es √2.</p>
 </header>
 
 <div class="main-container">
@@ -126,53 +131,78 @@
 
   <div class="stats">
     <div class="stat stairs">
-      <span>Longitud Escalera</span>
-      <strong id="lengthLabel">2.0000</strong>
+      <span>Escalera (2)</span>
+      <strong>2.0000</strong>
+    </div>
+    <div class="stat circ">
+      <span>Diagonal (√2)</span>
+      <strong>1.4142</strong>
     </div>
     <div class="stat dev">
-      <span>Desviación Máx.</span>
-      <strong id="devLabel">0.500000</strong>
+      <span>Desviación</span>
+      <strong id="devLabel">0.5000</strong>
     </div>
   </div>
 </div>
 
 <script>
+  // Configuración para pantallas de alta resolución (Retina)
+  const dpr = window.devicePixelRatio || 1;
+  
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
   const graphCanvas = document.getElementById('graphCanvas');
   const gCtx = graphCanvas.getContext('2d');
+
+  // Ajustar resolución de los lienzos
+  [canvas, graphCanvas].forEach(cv => {
+    cv.width = 400 * dpr;
+    cv.height = 400 * dpr;
+    cv.style.width = '400px';
+    cv.style.height = '400px';
+  });
+  ctx.scale(dpr, dpr);
+  gCtx.scale(dpr, dpr);
   
   const slider = document.getElementById('steps');
   const stepsLabel = document.getElementById('stepsLabel');
-  const lengthLabel = document.getElementById('lengthLabel');
   const devLabel = document.getElementById('devLabel');
   const playBtn = document.getElementById('playBtn');
   const toggleAreaBtn = document.getElementById('toggleAreaBtn');
 
-  const PAD = 40;
-  const SIDE = canvas.width - PAD * 2;
+  // Coordenadas del cuadrado
+  const PAD = 50;
+  const SIDE = 300;
   const OX = PAD;
-  const OY = canvas.height - PAD;
+  const OY = 400 - PAD;
 
   let isPlaying = false;
   let showArea = false;
   let playInterval;
 
-  // Escala logarítmica: el slider va de 0 a 100, N = 2^(slider/10)
   function getN() {
     return Math.max(1, Math.round(Math.pow(2, slider.value / 10)));
   }
 
+  // La desviación es la distancia vertical máxima entre la escalera y la diagonal.
+  // Para N peldaños, el escalón más alejado está a 1/(2N) de la diagonal.
+  function getDeviation(N) {
+    return 1 / (2 * N); 
+  }
+
   function drawStaircase() {
     const N = getN();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stepsLabel.textContent = N;
+    devLabel.textContent = getDeviation(N).toFixed(4);
+    
+    ctx.clearRect(0, 0, 400, 400);
 
     // Cuadrado base
     ctx.strokeStyle = '#cbd5e1';
     ctx.lineWidth = 2;
     ctx.strokeRect(OX, OY - SIDE, SIDE, SIDE);
 
-    // Diagonal
+    // Diagonal (rojo)
     ctx.strokeStyle = '#ef4444';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -180,22 +210,9 @@
     ctx.lineTo(OX + SIDE, OY - SIDE);
     ctx.stroke();
 
-    // Escalera
+    // Escalera (azul)
     const stepW = SIDE / N;
     const stepH = SIDE / N;
-    
-    // Sombreado del área (opcional)
-    if (showArea) {
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
-      ctx.beginPath();
-      ctx.moveTo(OX, OY);
-      for (let i = 0; i < N; i++) {
-        ctx.lineTo(OX + (i + 1) * stepW, OY - i * stepH);
-        ctx.lineTo(OX + (i + 1) * stepW, OY - (i + 1) * stepH);
-      }
-      ctx.closePath();
-      ctx.fill();
-    }
 
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = Math.max(1, 5 - Math.log10(N));
@@ -206,32 +223,55 @@
       ctx.lineTo(OX + (i + 1) * stepW, OY - i * stepH);
       ctx.lineTo(OX + (i + 1) * stepW, OY - (i + 1) * stepH);
     }
+
+    if (showArea) {
+      ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+      ctx.fill();
+    }
     ctx.stroke();
   }
 
   function drawGraph() {
-    gCtx.clearRect(0, 0, graphCanvas.width, graphCanvas.height);
+    gCtx.clearRect(0, 0, 400, 400);
     
-    const N = getN();
-    const W = graphCanvas.width;
-    const H = graphCanvas.height;
-    const margin = 40;
-    const graphW = W - margin * 2;
-    const graphH = H - margin * 2;
+    const margin = 50;
+    const graphW = 400 - margin * 2;
+    const graphH = 400 - margin * 2;
+    const MAX_Y = 2.5; // El valor máximo del eje Y será 2.5
 
-    // Ejes
-    gCtx.strokeStyle = '#64748b';
+    // Dibujar cuadrícula y ejes
+    gCtx.strokeStyle = '#334155';
     gCtx.lineWidth = 1;
-    gCtx.beginPath();
-    gCtx.moveTo(margin, H - margin);
-    gCtx.lineTo(W - margin, H - margin); // X
-    gCtx.moveTo(margin, margin);
-    gCtx.lineTo(margin, H - margin); // Y
-    gCtx.stroke();
+    gCtx.font = '11px sans-serif';
+    gCtx.fillStyle = '#64748b';
+    gCtx.textAlign = 'right';
+    gCtx.textBaseline = 'middle';
 
-    // Función para dibujar una línea en la gráfica
-    // X: log(N) hasta log(1024) -> 0 a 1
-    // Y: valor de 0 a 2 (longitud) a escala
+    // Eje Y (0 a 2.5)
+    for (let i = 0; i <= MAX_Y; i+=0.5) {
+      const y = 400 - margin - (i / MAX_Y) * graphH;
+      gCtx.beginPath();
+      gCtx.moveTo(margin, y);
+      gCtx.lineTo(400 - margin, y);
+      gCtx.stroke();
+      gCtx.fillText(i.toString(), margin - 8, y);
+    }
+
+    // Eje X (Escala logarítmica de N: 1 a 1024)
+    gCtx.textAlign = 'center';
+    gCtx.textBaseline = 'top';
+    for (let i = 0; i <= 3; i++) {
+      const x = margin + (i / 3) * graphW;
+      gCtx.beginPath();
+      gCtx.moveTo(x, margin);
+      gCtx.lineTo(x, 400 - margin);
+      gCtx.stroke();
+      gCtx.fillText(Math.pow(2, i*3.33).toFixed(0), x, 400 - margin + 8);
+    }
+    
+    gCtx.fillText('N (Peldaños)', 400 - margin, 400 - margin + 25);
+
+    // Función para graficar
     function plot(fn, color, width) {
       gCtx.strokeStyle = color;
       gCtx.lineWidth = width;
@@ -239,60 +279,64 @@
       for (let i = 0; i <= 100; i++) {
         const n = Math.pow(2, i / 10);
         const x = margin + (i / 100) * graphW;
-        const y = H - margin - (fn(n) / 2.5) * graphH; // 2.5 para dar margen arriba
+        const val = fn(n);
+        const y = 400 - margin - (val / MAX_Y) * graphH; 
         if (i === 0) gCtx.moveTo(x, y);
         else gCtx.lineTo(x, y);
       }
       gCtx.stroke();
     }
 
-    // Línea de Longitud (siempre 2)
-    plot(n => 2, '#3b82f6', 2);
-    
-    // Línea de Diagonal + Desviación (1.414 + 0.5/n)
-    // Muestra cómo se acerca a 1.414
-    plot(n => Math.SQRT2 + (1 / (2 * n)), '#10b981', 2);
+    // Graficar líneas (Desviación x4 para que sea visible)
+    plot(n => 2, '#3b82f6', 2);                         // Perímetro
+    plot(n => Math.SQRT2, '#ef4444', 2);                // Diagonal
+    plot(n => getDeviation(n) * 4, '#10b981', 2);       // Desviación
 
-    // Punto actual
+    // Indicador de posición actual (Línea vertical punteada)
+    const currentN = getN();
     const currentX = margin + (slider.value / 100) * graphW;
-    const currentY = H - margin - (2 / 2.5) * graphH;
-    gCtx.fillStyle = '#3b82f6';
-    gCtx.beginPath();
-    gCtx.arc(currentX, currentY, 4, 0, Math.PI * 2);
-    gCtx.fill();
-
-    gCtx.fillStyle = '#10b981';
-    const currentYDev = H - margin - ((Math.SQRT2 + (1/(2*N))) / 2.5) * graphH;
-    gCtx.beginPath();
-    gCtx.arc(currentX, currentYDev, 4, 0, Math.PI * 2);
-    gCtx.fill();
-
-    // Textos
-    gCtx.fillStyle = '#94a3b8';
-    gCtx.font = '12px sans-serif';
-    gCtx.fillText('Longitud', margin + 5, margin - 10);
-    gCtx.fillStyle = '#3b82f6';
-    gCtx.fillRect(margin + 5, margin - 5, 10, 10);
     
-    gCtx.fillStyle = '#10b981';
-    gCtx.fillRect(margin + 70, margin - 5, 10, 10);
-    gCtx.fillStyle = '#94a3b8';
-    gCtx.fillText('Diagonal + Desv.', margin + 85, margin - 10);
+    gCtx.strokeStyle = '#94a3b8';
+    gCtx.setLineDash([4, 4]);
+    gCtx.beginPath();
+    gCtx.moveTo(currentX, margin);
+    gCtx.lineTo(currentX, 400 - margin);
+    gCtx.stroke();
+    gCtx.setLineDash([]); // Quitar punteado
 
-    gCtx.fillText('N (peldaños)', W - margin - 60, H - margin + 20);
+    // Dibujar los puntos actuales
+    const points = [
+      { val: 2, color: '#3b82f6' },
+      { val: Math.SQRT2, color: '#ef4444' },
+      { val: getDeviation(currentN) * 4, color: '#10b981' }
+    ];
+
+    points.forEach(p => {
+      const y = 400 - margin - (p.val / MAX_Y) * graphH;
+      gCtx.fillStyle = p.color;
+      gCtx.beginPath();
+      gCtx.arc(currentX, y, 4, 0, Math.PI * 2);
+      gCtx.fill();
+    });
+
+    // Leyenda
+    gCtx.textAlign = 'left';
+    gCtx.textBaseline = 'middle';
+    gCtx.fillStyle = '#3b82f6'; gCtx.fillRect(margin + 5, 10, 10, 10);
+    gCtx.fillStyle = '#94a3b8'; gCtx.fillText('Escalera', margin + 20, 15);
+    
+    gCtx.fillStyle = '#ef4444'; gCtx.fillRect(margin + 90, 10, 10, 10);
+    gCtx.fillStyle = '#94a3b8'; gCtx.fillText('Diagonal', margin + 105, 15);
+
+    gCtx.fillStyle = '#10b981'; gCtx.fillRect(margin + 170, 10, 10, 10);
+    gCtx.fillStyle = '#94a3b8'; gCtx.fillText('Desviación (x4)', margin + 185, 15);
   }
 
   function update() {
-    const N = getN();
-    stepsLabel.textContent = N;
-    lengthLabel.textContent = '2.0000';
-    devLabel.textContent = (1 / (2 * N)).toFixed(6);
-    
     drawStaircase();
     drawGraph();
   }
 
-  // Event Listeners
   slider.addEventListener('input', update);
   
   playBtn.addEventListener('click', () => {
@@ -302,7 +346,7 @@
       playBtn.classList.add('active');
       playInterval = setInterval(() => {
         let val = parseInt(slider.value) + 1;
-        if (val > 100) val = 0; // Reiniciar
+        if (val > 100) val = 0;
         slider.value = val;
         update();
       }, 100);
